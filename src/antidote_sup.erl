@@ -51,25 +51,20 @@ init(_Args) ->
                       {riak_core_vnode_master, start_link, [clocksi_vnode]},
                       permanent, 5000, worker, [riak_core_vnode_master]},
 
-    ClockSIsTxCoordSup =  { clocksi_static_tx_coord_sup,
+    ClockSIsTxCoordSup =  {clocksi_static_tx_coord_sup,
                            {clocksi_static_tx_coord_sup, start_link, []},
                            permanent, 5000, supervisor, [clockSI_static_tx_coord_sup]},
 
-    ClockSIiTxCoordSup =  { clocksi_interactive_tx_coord_sup,
-                            {clocksi_interactive_tx_coord_sup, start_link, []},
-                            permanent, 5000, supervisor,
-                            [clockSI_interactive_tx_coord_sup]},
+    ClockSIiTxCoordSup =  {clocksi_interactive_tx_coord_sup,
+			   {clocksi_interactive_tx_coord_sup, start_link, []},
+			   permanent, 5000, supervisor,
+			   [clockSI_interactive_tx_coord_sup]},
     
     ClockSIReadSup = {clocksi_readitem_sup,
     		      {clocksi_readitem_sup, start_link, []},
     		      permanent, 5000, supervisor,
     		      [clocksi_readitem_sup]},
-    
-    VectorClockMaster = {vectorclock_vnode_master,
-                         {riak_core_vnode_master,  start_link,
-                          [vectorclock_vnode]},
-                         permanent, 5000, worker, [riak_core_vnode_master]},
-
+        
     MaterializerMaster = {materializer_vnode_master,
                           {riak_core_vnode_master,  start_link,
                            [materializer_vnode]},
@@ -84,6 +79,17 @@ init(_Args) ->
     InterDcLogReaderRMaster = ?CHILD(inter_dc_log_reader_response, worker, []),
     InterDcLogSenderMaster = ?VNODE(inter_dc_log_sender_vnode_master, inter_dc_log_sender_vnode),
 
+    
+    MetaDataManagerSup = {meta_data_manager_sup,
+			  {meta_data_manager_sup, start_link, [stable]},
+			  permanent, 5000, supervisor,
+			  [meta_data_manager_sup]},
+
+    MetaDataSenderSup = {meta_data_sender_sup,
+			  {meta_data_sender_sup, start_link, [stable_time_functions:export_funcs_and_vals()]},
+			  permanent, 5000, supervisor,
+			  [meta_data_sender_sup]},
+
     {ok,
      {{one_for_one, 5, 10},
       [LoggingMaster,
@@ -91,7 +97,6 @@ init(_Args) ->
        ClockSIsTxCoordSup,
        ClockSIiTxCoordSup,
        ClockSIReadSup,
-       VectorClockMaster,
        MaterializerMaster,
        ZMQContextManager,
        InterDcPub,
@@ -100,4 +105,6 @@ init(_Args) ->
        InterDcDepVnode,
        InterDcLogReaderQMaster,
        InterDcLogReaderRMaster,
-        InterDcLogSenderMaster]}}.
+       InterDcLogSenderMaster,
+       MetaDataManagerSup,
+       MetaDataSenderSup]}}.

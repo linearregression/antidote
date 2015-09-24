@@ -183,11 +183,11 @@ update_clock(State = #state{last_updated = LastUpdated}, DCID, Timestamp) ->
     %% Push the changes and update the last_updated parameter to the current timestamp.
     true ->
       %% Update the vectorclock the OLD way
-      ok = vectorclock:update_clock(State#state.partition, DCID, Timestamp),
-      dc_utilities:call_vnode(State#state.partition, vectorclock_vnode_master, calculate_stable_snapshot),
+      %%ok = vectorclock:update_clock(State#state.partition, DCID, Timestamp),
+      %%dc_utilities:call_vnode(State#state.partition, vectorclock_vnode_master, calculate_stable_snapshot),
 
       %% Update the stable snapshot NEW way (as in Tyler's weak_meta_data branch)
-      %%ok = meta_data_sender:put_meta_dict(State#state.partition, NewClock),
+      ok = meta_data_sender:put_meta_dict(stable, State#state.partition, NewClock),
 
       Now;
     %% Stable snapshot was recently updated, no need to do so.

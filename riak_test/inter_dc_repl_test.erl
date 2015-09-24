@@ -13,6 +13,8 @@ confirm() ->
         {riak_core, [{ring_creation_size, 8}]}
     ]),
     [Cluster1, Cluster2] = rt:build_clusters([1,1]),
+    rt:wait_until_ring_converged(Cluster1),
+    rt:wait_until_ring_converged(Cluster2),
 
     Node1 = hd(Cluster1),
     Node2 = hd(Cluster2),
@@ -36,7 +38,6 @@ confirm() ->
     {ok, DC2} = rpc:call(Node2, inter_dc_manager, get_descriptor, []),
 
     lager:info("DCs: ~p and ~p", [DC1, DC2]),
-
 
     ok = rpc:call(Node1, inter_dc_manager, observe_dc, [DC2]),
     ok = rpc:call(Node2, inter_dc_manager, observe_dc, [DC1]),
