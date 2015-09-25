@@ -153,9 +153,21 @@ handle_command({read, Key, Type, SnapshotTime, TxId}, _Sender,
 
 handle_command({update, Key, DownstreamOp}, _Sender,
                State = #state{ops_cache = OpsCache, snapshot_cache=SnapshotCache})->
-    true = op_insert_gc(Key,DownstreamOp, OpsCache, SnapshotCache),
+    case op_insert_gc(Key,DownstreamOp, OpsCache, SnapshotCache) of
+	true ->
+	    Preflist = log_utilities:get_preflist_from_key(Key),
+	    IndexNode = hd(Preflist),
+	    riak_core_vnode_master:command(IndexNode, {perform_op_gc, Key, DownstreamOp},
+					   materializer_vnode_master);
+	false ->
+	    ok
+    end,
     {reply, ok, State};
 
+handle_command({perform_op_gc, Key, DownstreamOp}, _Sender,
+               State = #state{ops_cache = OpsCache, snapshot_cache=SnapshotCache})->
+    true = perform_op_gc(Key,DownstreamOp, OpsCache, SnapshotCache),
+    {reply, ok, State};
 
 handle_command({store_ss, Key, Snapshot, CommitTime}, _Sender,
                State = #state{ops_cache = OpsCache, snapshot_cache=SnapshotCache})->
@@ -339,33 +351,24 @@ prune_ops({_Len,OpsDict}, Threshold)->
 %% the mechanism is very simple; when there are more than OPS_THRESHOLD
 %% operations for a given key, just perform a read, that will trigger
 %% the GC mechanism.
--spec op_insert_gc(key(), clocksi_payload(), cache_id(), cache_id()) -> true.
-op_insert_gc(Key, DownstreamOp, OpsCache, SnapshotCache)->
+-spec op_insert_gc(key(), clocksi_payload(), cache_id(), cache_id()) -> boolean().
+op_insert_gc(Key, DownstreamOp, OpsCache, _SnapshotCache)->
     {Length,OpsDict} = case ets:lookup(OpsCache, Key) of
 			   []->
 			       {0,[]};
 			   [{_, {Len,Dict}}]->
 			       {Len,Dict}
 		       end,
-    case (Length)>=?OPS_THRESHOLD of
-        true ->
-            Type=DownstreamOp#clocksi_payload.type,
-            SnapshotTime=DownstreamOp#clocksi_payload.snapshot_time,
-            {_, _} = internal_read(Key, Type, SnapshotTime, ignore, OpsCache, SnapshotCache),
-	    %% Have to get the new ops dict because the interal_read can change it
-	    {Length1,OpsDict1} = case ets:lookup(OpsCache, Key) of
-				     []->
-					 [];
-				     [{_, {Len1,Dict1}}]->
-					 {Len1,Dict1}
-				 end,
-            OpsDict2=[DownstreamOp|OpsDict1],
-            ets:insert(OpsCache, {Key, {Length1 + 1, OpsDict2}});
-        false ->
-            OpsDict1=[DownstreamOp|OpsDict],
-            ets:insert(OpsCache, {Key, {Length + 1,OpsDict1}})
-    end.
+    OpsDict1=[DownstreamOp|OpsDict],
+    ets:insert(OpsCache, {Key, {Length + 1,OpsDict1}}),
+    (Length)>=?OPS_THRESHOLD.
 
+-spec perform_op_gc(key(), clocksi_payload(), cache_id(), cache_id()) -> true.
+perform_op_gc(Key, DownstreamOp, OpsCache, SnapshotCache)->
+    Type=DownstreamOp#clocksi_payload.type,
+    SnapshotTime=DownstreamOp#clocksi_payload.snapshot_time,
+    {_, _} = internal_read(Key, Type, SnapshotTime, ignore, OpsCache, SnapshotCache),
+    true.
 
 -ifdef(TEST).
 
