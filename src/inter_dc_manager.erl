@@ -28,8 +28,10 @@
 -export([
   get_descriptor/0,
   observe_dc/1,
+  observe_dc_sync/1,
   observe/1,
   observe_dcs/1,
+  observe_dcs_sync/1,
   forget_dc/1,
   forget_dcs/1]).
 
@@ -55,6 +57,18 @@ observe_dc(Descriptor) ->
 -spec observe_dcs([interdc_descriptor()]) -> ok.
 observe_dcs(Descriptors) -> lists:foreach(fun observe_dc/1, Descriptors).
 
+-spec observe_dcs_sync([interdc_descriptor()]) -> ok.
+observe_dcs_sync(Descriptors) ->
+  {ok, SS} = vectorclock:get_stable_snapshot(),
+  observe_dcs(Descriptors),
+  lists:foreach(fun({DCID, _,_}) ->
+    Value = vectorclock:get_clock_of_dc(DCID, SS),
+    wait_for_stable_snapshot(DCID, Value)
+  end, Descriptors).
+
+-spec observe_dc_sync(interdc_descriptor()) -> ok.
+observe_dc_sync(Descriptor) -> observe_dcs_sync([Descriptor]).
+
 -spec forget_dc(interdc_descriptor()) -> ok.
 forget_dc({DCID, _, _}) ->
   lager:info("Forgetting DC ~p", [DCID]),
@@ -71,3 +85,16 @@ forget_dcs(Descriptors) -> lists:foreach(fun forget_dc/1, Descriptors).
 observe(DcNodeAddress) ->
   {ok, Desc} = rpc:call(DcNodeAddress, inter_dc_manager, get_descriptor, []),
   observe_dc(Desc).
+
+wait_for_stable_snapshot(DCID, MinValue) ->
+  {ok, SS} = vectorclock:get_stable_snapshot(),
+  Value = vectorclock:get_clock_of_dc(DCID, SS),
+  case Value > MinValue of
+    true ->
+      lager:info("Connected to DC ~p", [DCID]),
+      ok;
+    false ->
+      lager:info("Waiting for DC ~p", [DCID]),
+      timer:sleep(1000),
+      wait_for_stable_snapshot(DCID, MinValue)
+  end.
