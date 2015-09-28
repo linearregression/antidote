@@ -116,7 +116,7 @@ init([From, ClientClock]) ->
 -spec create_transaction_record(snapshot_time() | ignore) -> {tx(),txid()}.
 create_transaction_record(ClientClock) ->
     %% Seed the random because you pick a random read server, this is stored in the process state
-    _Res = random:seed(now()),
+    _Res = random:seed(os:timestamp()),
     {ok, SnapshotTime} = case ClientClock of
 			     ignore ->
 				 get_snapshot_time();
@@ -556,7 +556,8 @@ get_snapshot_time(ClientClock) ->
 
 -spec get_snapshot_time() -> {ok, snapshot_time()}.
 get_snapshot_time() ->
-    Now = clocksi_vnode:now_microsec(erlang:now()) - ?OLD_SS_MICROSEC,
+    %% Now = clocksi_vnode:now_microsec(erlang:now()) - ?OLD_SS_MICROSEC,    
+    Now = vectorclock:now_millisec(),
     {ok, VecSnapshotTime} = ?VECTORCLOCK:get_stable_snapshot(),
     DcId = ?DC_UTIL:get_my_dc_id(),
     SnapshotTime = dict:update(DcId,

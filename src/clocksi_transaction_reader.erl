@@ -206,7 +206,8 @@ get_stable_time(Partition, Prev_stable_time) ->
                                         Min_time
                                 end
                         end,
-                        clocksi_vnode:now_microsec(erlang:now()),
+			vectorclock:now_millisec(),
+                        %% clocksi_vnode:now_microsec(erlang:now()),
                         Active_txns);
         _ -> Prev_stable_time
     end.

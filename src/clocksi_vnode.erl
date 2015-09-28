@@ -265,7 +265,8 @@ handle_command({prepare, Transaction, WriteSet}, _Sender,
                               active_txs_per_key=ActiveTxPerKey,
                               prepared_tx=PreparedTx
 			     }) ->
-    PrepareTime = now_microsec(erlang:now()),
+    %% PrepareTime = now_microsec(erlang:now()),
+    PrepareTime = vectorclock:now_millisec(),
     {Result, NewPrepare} = prepare(Transaction, WriteSet, CommittedTx, ActiveTxPerKey, PreparedTx, PrepareTime),
     case Result of
         {ok, _} ->
@@ -287,7 +288,8 @@ handle_command({single_commit, Transaction, WriteSet}, _Sender,
                               active_txs_per_key=ActiveTxPerKey,
                               prepared_tx=PreparedTx
 			     }) ->
-    PrepareTime = now_microsec(erlang:now()),
+    %% PrepareTime = now_microsec(erlang:now()),
+    PrepareTime = vectorclock:now_millisec(),
     {Result,NewPrepare} = prepare(Transaction, WriteSet, CommittedTx, ActiveTxPerKey, PreparedTx, PrepareTime),
     case Result of
         {ok, _} ->
@@ -424,7 +426,8 @@ prepare(Transaction, TxWriteSet, CommittedTx, ActiveTxPerKey, PreparedTx, Prepar
 			    ok
 		    end,
 		    PrepDict = set_prepared(PreparedTx,[{Key, Type, {Op, Actor}} | Rest],TxId,PrepareTime,dict:new()),
-		    NewPrepare = now_microsec(erlang:now()),
+		    %% NewPrepare = now_microsec(erlang:now()),
+		    NewPrepare = vectorclock:now_millisec(),
 		    ok = reset_prepared(PreparedTx,[{Key, Type, {Op, Actor}} | Rest],TxId,NewPrepare,PrepDict),
 		    LogRecord = #log_record{tx_id=TxId,
 					    op_type=prepare,

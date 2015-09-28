@@ -77,7 +77,7 @@ process_q_dc(Dc, DcQ, StateData=#recvr_state{lastCommitted = LastCTS,
             Localclock = vectorclock:set_clock_of_dc(
                            Dc, 0,
                            vectorclock:set_clock_of_dc(
-                             LocalDc, now_millisec(erlang:now()), LC)),
+                             LocalDc, vectorclock:now_millisec(), LC)),
             case orddict:find(Dc, LastCTS) of  % Check for duplicate
                 {ok, CTS} ->
                     if Ts >= CTS ->
@@ -187,5 +187,5 @@ enqueue(Dc, Data, RecQ) ->
             set(Dc, Q2, RecQ)
     end.
 
-now_millisec({MegaSecs, Secs, MicroSecs}) ->
-    (MegaSecs * 1000000 + Secs) * 1000000 + MicroSecs.
+%% now_millisec({MegaSecs, Secs, MicroSecs}) ->
+%%     (MegaSecs * 1000000 + Secs) * 1000000 + MicroSecs.

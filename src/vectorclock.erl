@@ -31,10 +31,15 @@
          set_clock_of_dc/3,
          get_stable_snapshot/0,
          from_list/1,
+	 now_millisec/0,
          eq/2,lt/2,gt/2,le/2,ge/2, strict_ge/2, strict_le/2]).
 
 -export_type([vectorclock/0]).
 
+-spec now_millisec() -> non_neg_integer().
+now_millisec() ->
+  {MegaSecs, Secs, MicroSecs} = os:timestamp(),
+  (MegaSecs * 1000000 + Secs) * 1000000 + MicroSecs.
 
 -spec get_clock_by_key(Key :: key()) -> {ok, vectorclock:vectorclock()} | {error, term()}.
 get_clock_by_key(Key) ->
